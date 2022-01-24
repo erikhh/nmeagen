@@ -80,57 +80,27 @@ const maxZoomLevel = 22;
 
 // Street map tile provider.
 const tileStreets = L.tileLayer(
-  "https://" +
-    ["a", "b", "c"][new Date() % 3] +
-    ".tile.openstreetmap.de/{z}/{x}/{y}.png",
+  "https://tiles.onboard-app.com/osm/{z}/{x}/{y}.png",
   {
     attribution:
-      "&copy; <a href='https://www.openstreetmap.org/copyright'>OpenStreetMap" +
-      "</a> contributors (<a href='http://opendatacommons.org/licenses/odbl/'" +
-      ">ODbL</a>)",
+      " © <a href='https://www.openstreetmap.org/copyright'>OpenStreetMap-bijdragers</a> ♥ <a class='donate-attr' href='https://donate.openstreetmap.org'>Donate now</a>. <a href='https://wiki.osmfoundation.org/wiki/Terms_of_Use' target='_blank'>Website en API-voorwaarden</a>",
     maxNativeZoom: 19,
     minZoom: minZoomLevel,
     maxZoom: maxZoomLevel
   }
 );
 
-// Topology map tile provider.
-const tileTopology = L.tileLayer(
-  "https://" +
-    ["a", "b", "c"][new Date() % 3] +
-    ".tile.opentopomap.org/{z}/{x}/{y}.png",
+// Semark overlay tiles.
+const tileSeamark = L.tileLayer(
+  "https://tiles.onboard-app.com/seamark/{z}/{x}/{y}.png",
   {
-    attribution:
-      "&copy; <a href='https://www.openstreetmap.org/copyright'>OpenStreetMap" +
-      "</a> contributors &copy; <a href='http://viewfinderpanoramas.org/'>" +
-      "SRTM</a> &copy; <a href='https://opentopomap.org/'>OpenTopoMap</a> (<" +
-      "a href='https://creativecommons.org/licenses/by-sa/3.0/'>CC-BY-SA</a>)",
-    maxNativeZoom: 17,
-    minZoom: minZoomLevel,
-    maxZoom: maxZoomLevel
+    attribution: 
+      " © <a href='http://www.openseamap.org'>OpenSeaMap</a> contributors",
+      maxNativeZoom: 19,
+      minZoom: minZoomLevel,
+      maxZoom: maxZoomLevel
   }
-);
-
-// Satellite image tile provider.
-const tileSatellite = L.tileLayer(
-  "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/" +
-    "MapServer/tile/{z}/{y}/{x}",
-  {
-    attribution:
-      "&copy; <a href='https://server.arcgisonline.com/arcgis/rest/services/" +
-      "World_Imagery/MapServer'>Esri et al.</a>",
-    maxNativeZoom: 19,
-    minZoom: minZoomLevel,
-    maxZoom: maxZoomLevel
-  }
-);
-
-// Human-readable names for the available map layers.
-const mapLayers = {
-  Streets: tileStreets,
-  Topology: tileTopology,
-  Satellite: tileSatellite
-};
+)
 
 /*******************************************************************************
  *
@@ -175,9 +145,6 @@ const redoHistoryArray = [];
 
 // Map handle.
 let map = null;
-
-// Map layer control handle.
-let mapLayerControl = null;
 
 /*******************************************************************************
  *
@@ -1808,9 +1775,6 @@ function onMapControlComponentMouseMove(event) {
     removeAllPreviewPoints();
     removeAllPreviewOrientedSegments();
   }
-  if (!$(this).hasClass("leaflet-control-layers")) {
-    mapLayerControl.collapse();
-  }
   L.DomEvent.stopPropagation(event);
 }
 
@@ -1930,7 +1894,6 @@ function onMenuMouseEnter() {
     removeAllPreviewPoints();
     removeAllPreviewOrientedSegments();
   }
-  mapLayerControl.collapse();
 }
 
 /**
@@ -2081,18 +2044,6 @@ function onMapZoomEnd() {
   updateZoomButtons();
 }
 
-/**
- * Callback invoked when the map layer control toggle is clicked.
- */
-function onMapLayerControlToggleClick() {
-  if ($(".leaflet-control-layers").attr("first-toggle") !== "no") {
-    $(".leaflet-control-layers-expanded span").on("click", function() {
-      mapLayerControl.collapse();
-    });
-    $(".leaflet-control-layers").attr("first-toggle", "no");
-  }
-}
-
 /*******************************************************************************
  *
  *    INITIALIZATION FUNCTIONS
@@ -2103,9 +2054,9 @@ function onMapLayerControlToggleClick() {
  * Initializes and configures the map.
  */
 function initializeMap() {
-  // Default initial map center position (Berlin) and zoom level.
-  let mapCenter = [52.51935462, 13.41225743];
-  let mapZoom = 14;
+  // Default initial map center position (Rotterdam) and zoom level.
+  let mapCenter = [51.97113430, 4.12055969];
+  let mapZoom = 12;
 
   // If the page was reloaded on the same tab, restore the last map view.
   if (sessionStorage.getItem("mapCenterLatitude") !== null) {
@@ -2120,7 +2071,7 @@ function initializeMap() {
     zoomControl: false,
     zoom: mapZoom,
     center: mapCenter,
-    layers: [tileStreets]
+    layers: [tileStreets, tileSeamark]
   });
 
   // Place the zoom +/- buttons on the top-right side of the map.
@@ -2129,19 +2080,6 @@ function initializeMap() {
 
   // Disable zoom on double clicks on the map.
   map.doubleClickZoom.disable();
-
-  // Register all available map layers.
-  mapLayerControl = L.control.layers(mapLayers);
-  mapLayerControl.addTo(map);
-
-  // Make the entries in the map layer control component behave like buttons.
-  $(".leaflet-control-layers-list label").attr("tabindex", 0);
-  $(".leaflet-control-layers-list label").on("keydown", function(event) {
-    if (event.keyCode === 13) {
-      $(this).click();
-      mapLayerControl.collapse();
-    }
-  });
 
   // Add the search box to the map.
   map.addControl(
@@ -2172,28 +2110,6 @@ function initializeMap() {
     .on("contextmenu", function() {})
     .on("moveend", onMapMoveEnd)
     .on("zoomend", onMapZoomEnd);
-
-  // Map control component event handlers.
-  $(".leaflet-control-layers-toggle").on("click", onMapLayerControlToggleClick);
-  $(
-    [
-      ".leaflet-control-search",
-      ".leaflet-control-zoom-in",
-      ".leaflet-control-zoom-out",
-      ".leaflet-control-layers",
-      ".leaflet-control-attribution"
-    ].join(", ")
-  ).on("mousemove mouseenter", onMapControlComponentMouseMove);
-
-  // Disable the mouseenter/leave event handlers from the map layer control
-  // component (they are buggy: https://github.com/Leaflet/Leaflet/issues/6579).
-  L.DomEvent.off(
-    mapLayerControl._container,
-    {
-      mouseenter: mapLayerControl.expand
-    },
-    mapLayerControl
-  );
 }
 
 /**
